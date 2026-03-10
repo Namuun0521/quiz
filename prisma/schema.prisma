@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Article {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  summary   Summary?
+  quiz      Quiz?
+
+  @@index([userId, createdAt])
+}
+
+model Summary {
+  id        String   @id @default(cuid())
+  articleId String   @unique
+  maxLength Int?
+  text      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+}
+
+model Quiz {
+  id        String   @id @default(cuid())
+  articleId String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  article   Article       @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+}
+
+model QuizQuestion {
+  id          String  @id @default(cuid())
+  quizId      String
+  order       Int
+  question    String  @db.Text
+  choices     Json?   // ["A","B","C","D"] эсвэл [{label:"A", text:"..."}, ...]
+  correct     String  @db.Text
+  explanation String? @db.Text
+
+  quiz        Quiz    @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId, order])
+}
+
+model QuizAttempt {
+  id        String   @id @default(cuid())
+  quizId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  score     Int
+  total     Int
+  answers   Json
+
+  quiz      Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId, userId, createdAt])
+}
