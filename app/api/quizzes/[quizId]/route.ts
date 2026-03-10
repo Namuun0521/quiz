@@ -1,4 +1,3 @@
-// app/api/quizzes/[quizId]/route.ts
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
@@ -7,14 +6,16 @@ export const runtime = "nodejs";
 
 export async function GET(
   _: Request,
-  { params }: { params: { quizId: string } },
+  { params }: { params: Promise<{ quizId: string }> },
 ) {
   const { userId } = await auth();
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { quizId } = await params;
+
   const quiz = await prisma.quiz.findFirst({
-    where: { id: params.quizId, article: { userId } },
+    where: { id: quizId, article: { userId } },
     include: {
       article: { select: { id: true, title: true } },
       questions: { orderBy: { order: "asc" } },

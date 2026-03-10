@@ -4,12 +4,12 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 
 const BodySchema = z.object({
-  answersByQuestionId: z.record(z.string(), z.string()), // { [questionId]: "A" }
+  answersByQuestionId: z.record(z.string(), z.string()),
 });
 
 export async function POST(
   req: Request,
-  { params }: { params: { quizId: string } },
+  { params }: { params: Promise<{ quizId: string }> },
 ) {
   const { userId } = await auth();
   if (!userId)
@@ -20,8 +20,10 @@ export async function POST(
   if (!parsed.success)
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
+  const { quizId } = await params;
+
   const quiz = await prisma.quiz.findFirst({
-    where: { id: params.quizId, article: { userId } },
+    where: { id: quizId, article: { userId } },
     include: { questions: { orderBy: { order: "asc" } } },
   });
   if (!quiz) return NextResponse.json({ error: "Not found" }, { status: 404 });

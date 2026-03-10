@@ -42,7 +42,7 @@ export default function QuizPage() {
     if (!raw) return [];
     if (Array.isArray(raw) && raw.length && typeof raw[0] === "object")
       return raw;
-    // fallback
+
     if (Array.isArray(raw)) {
       const labels = ["A", "B", "C", "D"];
       return raw
@@ -75,7 +75,7 @@ export default function QuizPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
-      <h2>✨ Quick test</h2>
+      <h2> Quick test</h2>
       <p style={{ opacity: 0.7 }}>{quiz.article?.title}</p>
 
       {!result ? (
@@ -204,7 +204,11 @@ export default function QuizPage() {
           </div>
           <div style={{ marginTop: 24, display: "flex", gap: 10 }}>
             <button
-              onClick={() => router.push("/articles/[id]")}
+              onClick={() =>
+                router.push(
+                  quiz?.article?.id ? `/articles/${quiz.article.id}` : "/",
+                )
+              }
               style={{
                 padding: "10px 14px",
                 borderRadius: 10,

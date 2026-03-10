@@ -9,6 +9,7 @@ export const runtime = "nodejs";
 
 const BodySchema = z.object({
   count: z.number().int().min(5).max(10).optional(),
+  force: z.boolean().optional(),
 });
 
 const QuizSchema = z.object({
@@ -41,7 +42,7 @@ async function askGemini(prompt: string) {
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { userId } = await auth();
   if (!userId)
@@ -53,9 +54,12 @@ export async function POST(
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
   const count = parsed.data.count ?? 5;
+  const force = parsed.data.force ?? false;
+
+  const { id } = await params;
 
   const article = await prisma.article.findFirst({
-    where: { id: params.id, userId },
+    where: { id, userId },
     include: { summary: true },
   });
   if (!article)
@@ -65,7 +69,13 @@ export async function POST(
     where: { articleId: article.id },
     select: { id: true },
   });
-  if (existing) return NextResponse.json({ quizId: existing.id, reused: true });
+
+  if (existing && !force)
+    return NextResponse.json({ quizId: existing.id, reused: true });
+
+  if (existing && force) {
+    await prisma.quiz.delete({ where: { id: existing.id } });
+  }
 
   const source = article.summary?.text || article.content;
 
@@ -98,7 +108,6 @@ CONTENT:
 ${source}
 `.trim();
 
-  // 1) try
   let raw1 = "";
   try {
     const { raw, cleaned } = await askGemini(basePrompt);
@@ -125,7 +134,6 @@ ${source}
 
     return NextResponse.json({ quizId: created.id });
   } catch (e) {
-    // 2) repair retry (1 удаа)
     try {
       const repairPrompt = `
 Fix the following output into VALID JSON matching the required shape.
